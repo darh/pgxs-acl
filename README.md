@@ -64,6 +64,11 @@ If a subject has a policy that explicitly denies the operation, the function ret
 If a subject has at least one policy that allows the operation, it returns `TRUE`. 
 If no matching policies are found, `NULL` is returned.
 
+### The idea behind returning `NULL`
+
+This allows you to detect situations where no policies match the operation and subjects and to decide how to handle that.
+Either by denying access, allowing it, or falling back to another access-control mechanism.
+
 ## On performance
 
 The extension is designed to be efficient, but function performance will depend on the number of policies and subjects involved.
@@ -181,6 +186,8 @@ That will have major performance implications (todo explain why).
 # Things that could be added in the future
  - set/get current user/roles helper functions
  - helper function to convert policies from/to JSON
+ - helper function to check multiple operations at once and return a map of operations to boolean values
+
 ...
 
 # Development environment
