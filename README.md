@@ -25,6 +25,13 @@ You will need build tools like `make` installed on your system, copy the files t
 
 See the [Dockerfile](Dockerfile) for a development environment setup and copy/adjust the RUN commands.
 
+After the extension is installed, you can use it in your database by running:
+
+```sql
+CREATE EXTENSION ac;
+```
+
+
 ## Extension types/domains
 | Type/Domain    | Description                                                 |
 |----------------|-------------------------------------------------------------|
