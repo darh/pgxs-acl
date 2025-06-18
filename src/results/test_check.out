@@ -1,0 +1,68 @@
+CREATE EXTENSION IF NOT EXISTS ac VERSION '0.0.1';
+WITH cases AS (
+    SELECT 'news',     'select', 'admin',   TRUE,  '001 Admin can always select from news'
+    UNION ALL SELECT 'news',     'select', 'visitor', TRUE,  '002 Visitor can always select from news'
+    UNION ALL SELECT 'news',     'select', 'writer',  TRUE,  '003 Writer can always select from news'
+    UNION ALL SELECT 'news',     'select', 'editor',  TRUE,  '004 Editor can always select from news'
+    UNION ALL SELECT 'news',     'select', 'editor',  TRUE,  '005 Editor can always select from news'
+    UNION ALL SELECT 'news',     'delete', 'editor',  NULL,  '006 Editor can not delete the news'
+    UNION ALL SELECT 'news',     'delete', 'admin',   TRUE,  '007 Admin can always delete the news'
+    UNION ALL SELECT 'news',     'delete', 'visitor', NULL,  '008 Visitor can not delete the news'
+    UNION ALL SELECT 'news',     'delete', 'writer',  NULL,  '009 Writer can not delete the news'
+    UNION ALL SELECT 'news',     'delete', 'owner',   FALSE, '010 Owner can not delete the news'
+    UNION ALL SELECT 'news',     'insert', 'admin',   TRUE,  '011 Admin can always insert into news'
+    UNION ALL SELECT 'news',     'insert', 'visitor', NULL,  '012 Visitor can not insert into news'
+    UNION ALL SELECT 'comments', 'select', 'admin',   TRUE,  '013 Admin can always select from comments'
+    UNION ALL SELECT 'comments', 'select', 'writer',  TRUE,  '014 Writer can always select from comments'
+    UNION ALL SELECT 'comments', 'select', 'editor',  TRUE,  '015 Editor can always select from comments'
+),
+     data AS (
+         SELECT 'news' as obj, ARRAY[
+             ac_policy('admin'::ac_subject, ARRAY['select', 'update', 'insert', 'delete'])
+             ,   ac_policy('visitor', 'select')
+             ,   ac_policy('writer', ARRAY['select', 'insert'])
+             ,   ac_policy('editor', ARRAY['select', 'update'])
+             ,   ac_policy('owner', ARRAY['select', 'update'], ARRAY['delete'])
+             ] as list
+         UNION ALL SELECT  'comments', ARRAY[
+             ac_policy('admin', ARRAY['select', 'update', 'insert', 'delete'])
+             ,   ac_policy('writer', ARRAY['select'])
+             ,   ac_policy('editor', ARRAY['select'])
+             ,   ac_policy('visitor', ARRAY['select', 'create'])
+             ,   ac_policy('owner', ARRAY['select', 'update'])
+             ]
+     ),
+     results AS (
+         SELECT ac_check(c.op, c.sub, d.list) AS result, c.*, d.list
+         FROM data AS d, cases AS c(obj, op, sub, expected, label)
+         WHERE d.obj = c.obj
+     )
+SELECT label
+     , CASE WHEN expected IS NULL
+                THEN expected IS NULL
+            ELSE result = expected
+    END AS pass
+     , op
+     , sub
+     , list
+FROM results
+ORDER BY label
+                   label                    | pass |   op   |   sub   |                                                                                    list                                                                                     
+--------------------------------------------+------+--------+---------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 001 Admin can always select from news      | t    | select | admin   | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 002 Visitor can always select from news    | t    | select | visitor | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 003 Writer can always select from news     | t    | select | writer  | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 004 Editor can always select from news     | t    | select | editor  | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 005 Editor can always select from news     | t    | select | editor  | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 006 Editor can not delete the news         | t    | delete | editor  | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 007 Admin can always delete the news       | t    | delete | admin   | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 008 Visitor can not delete the news        | t    | delete | visitor | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 009 Writer can not delete the news         | t    | delete | writer  | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 010 Owner can not delete the news          | t    | delete | owner   | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 011 Admin can always insert into news      | t    | insert | admin   | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 012 Visitor can not insert into news       | t    | insert | visitor | {"(admin,\"{select,update,insert,delete}\",)","(visitor,{select},)","(writer,\"{select,insert}\",)","(editor,\"{select,update}\",)","(owner,\"{select,update}\",{delete})"}
+ 013 Admin can always select from comments  | t    | select | admin   | {"(admin,\"{select,update,insert,delete}\",)","(writer,{select},)","(editor,{select},)","(visitor,\"{select,create}\",)","(owner,\"{select,update}\",)"}
+ 014 Writer can always select from comments | t    | select | writer  | {"(admin,\"{select,update,insert,delete}\",)","(writer,{select},)","(editor,{select},)","(visitor,\"{select,create}\",)","(owner,\"{select,update}\",)"}
+ 015 Editor can always select from comments | t    | select | editor  | {"(admin,\"{select,update,insert,delete}\",)","(writer,{select},)","(editor,{select},)","(visitor,\"{select,create}\",)","(owner,\"{select,update}\",)"}
+(15 rows)
+

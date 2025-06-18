@@ -1,0 +1,16 @@
+services:
+  # Postgres extension development environment
+  #
+  # You are strongly discouraged from using this for anything
+  # other than what it is intended for.
+  #
+  pgxdev:
+    build:
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_USER:     "dev"
+      POSTGRES_PASSWORD: "dev"
+      POSTGRES_DB:       "dev"
+
+    # Mapping extensions volume to the container
+    volumes: [ "./src:/extension" ]
